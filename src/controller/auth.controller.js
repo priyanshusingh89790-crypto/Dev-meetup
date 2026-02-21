@@ -1,34 +1,49 @@
 const User = require('../model/User');
 
 exports.signUp = async (req, res) => {
-    try {
-        console.log("Body: ", req.body);
-        const {firstName, lastName, gender, phone, email, password} = req.body;
-        
-        if (!firstName || !lastName || !gender || !phone || !email || !password) {
-            res.status(400).send({status: "failur", message: "Bad request!"})
-        }
-        
-        const existingUser = await User.findOne({ email })
-        if (existingUser) {
-            res.status(400).send({status: 'failure', message: 'User is already exist.'})
-        }
-        const dbPayload = {
-            firstName,
-            lastName,
-            gender,
-            phone,
-            email, 
-            password
-        }
-        const user = await User.create(dbPayload);
+  try {
+    console.log("Body:", req.body);
 
-        res.status(200).send({status: 'success', data: user })
-    } catch (error) {
-        console.log("Got an error while sing-up for the user, error: ", JSON.stringify(error))
-        res.status(500).send({status: 'error', data: error});
+    const { firstName, lastName, gender, phoneNumber, email, password } = req.body;
+
+    if (!firstName || !lastName || !gender || !phoneNumber || !email || !password) {
+      return res.status(400).send({
+        status: "failure",
+        message: "All fields are required"
+      });
     }
-}
+
+    const existingUser = await User.findOne({ email });
+
+    if (existingUser) {
+      return res.status(400).send({
+        status: "failure",
+        message: "User already exists"
+      });
+    }
+
+    const user = await User.create({
+      firstName,
+      lastName,
+      gender,
+      phone: phoneNumber,
+      email,
+      password
+    });
+
+    return res.status(201).send({
+      status: "success",
+      data: user
+    });
+
+  } catch (error) {
+    console.log("Signup error:", error);
+    return res.status(500).send({
+      status: "error",
+      message: "Server error"
+    });
+  }
+};
 
 exports.login = async (req, res) => {
     try {
