@@ -46,84 +46,116 @@ exports.signUp = async (req, res) => {
 };
 
 exports.login = async (req, res) => {
-    try {
-        const { email, password } = req.body;
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  try {
+    const { email, password } = req.body;
 
-        if (!email || !password || !emailRegex.test(email)) {
-            res.status(400).send({status: 'failur', message: "Bad request!"});
-        }
-
-        const user = await User.findOne({email}).exec();
-
-        if (!user) {
-            res.status(401).send({status: 'failur', message: "Invalid email or password"});
-        }
-
-        const isPasswordMatch = await user.comparePassword(password);
-
-        if (!isPasswordMatch) {
-            res.status(401).send({status: 'failur', message: "Invalid email or password"});
-        }
-
-        const token = await user.generateAuthToken();
-
-        // 🍪 Set cookie
-        res.cookie("token", token, {
-            httpOnly: true,        // JS can't access (XSS protection)
-            secure: false,         // true in production (HTTPS)
-            sameSite: "strict",    // CSRF protection
-            maxAge: 60 * 60 * 1000 // 1 hour
-        });
-
-        // 📩 Set header
-        res.setHeader("Authorization", `Bearer ${token}`);
-        
-
-        res.status(200).send({ 
-            status: "success", 
-            data: {
-                id: user._id,
-                firstName: user.firstName,
-                lastName: user.lastName,
-                gender: user. gender,
-                email: user.email,
-                phone: user.phone
-            }, 
-            token
-        })
-    } catch(error) {
-        res.status(500).send({status: 'error', data: error});
+    if (!email || !password) {
+      return res.status(400).send({
+        status: "failure",
+        message: "Email and password required"
+      });
     }
-}
+
+    const user = await User.findOne({ email });
+
+    if (!user) {
+      return res.status(401).send({
+        status: "failure",
+        message: "Invalid email or password"
+      });
+    }
+
+    const isMatch = await user.comparePassword(password);
+
+    if (!isMatch) {
+      return res.status(401).send({
+        status: "failure",
+        message: "Invalid email or password"
+      });
+    }
+
+    const token = await user.generateAuthToken();
+
+    res.cookie("token", token, {
+      httpOnly: true,
+      secure: true,
+      sameSite: "none",
+      maxAge: 60 * 60 * 1000
+    });
+
+    return res.status(200).send({
+      status: "success",
+      message: "Login successful",
+      user: {
+        id: user._id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        gender: user.gender,
+        email: user.email,
+        phone: user.phone
+      }
+    });
+
+  } catch (error) {
+    console.error("Login error:", error);
+    return res.status(500).send({
+      status: "error",
+      message: "Server error"
+    });
+  }
+};
 
 
 exports.changePassword = async (req, res) => {
-    try {
-        const { currentPassword, newPassword, confirmNewPassword } = req.body;
+  try {
+    const { currentPassword, newPassword, confirmNewPassword } = req.body;
 
-        if (!currentPassword || !newPassword || !confirmNewPassword) {
-            res.status(400).send({status: "failure", message: "Bad Request!"})
-        }
-
-        if (newPassword !== confirmNewPassword) {
-            res.status(400).send({status: "failure", message: "Password not matched!"})
-        }
-
-        const user = req.user;
-        if (!user) {
-            res.status(401).send({status: "faliur", message: 'Unauthorized: User not found!'});
-        }
-
-        const isPasswordMatch = await req.user.comparePassword(password);
-        console.log("isPasswordMatch : ", isPasswordMatch)
-
-        if (!isPasswordMatch) {
-            res.status(401).send({status: 'failur', message: "Invalid email or password"});
-        }
-
-
-    } catch (error) {
-        res.status(500).send({status: 'error', data: error});
+    if (!currentPassword || !newPassword || !confirmNewPassword) {
+      return res.status(400).send({
+        status: "failure",
+        message: "All fields are required"
+      });
     }
-}
+
+    if (newPassword !== confirmNewPassword) {
+      return res.status(400).send({
+        status: "failure",
+        message: "New passwords do not match"
+      });
+    }
+
+    const user = req.user;
+
+    if (!user) {
+      return res.status(401).send({
+        status: "failure",
+        message: "Unauthorized"
+      });
+    }
+
+    const isMatch = await user.comparePassword(currentPassword);
+
+    if (!isMatch) {
+      return res.status(401).send({
+        status: "failure",
+        message: "Current password is incorrect"
+      });
+    }
+
+    user.password = newPassword;
+
+    await user.save();
+
+    return res.status(200).send({
+      status: "success",
+      message: "Password updated successfully"
+    });
+
+  } catch (error) {
+    console.error("Change password error:", error);
+    return res.status(500).send({
+      status: "error",
+      message: "Server error"
+    });
+  }
+};
