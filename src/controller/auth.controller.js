@@ -133,7 +133,9 @@ exports.changePassword = async (req, res) => {
       });
     }
 
-    const isMatch = await user.comparePassword(currentPassword);
+    const dbUser = await User.findById(user._id).select("+password");
+
+    const isMatch = await dbUser.comparePassword(currentPassword);
 
     if (!isMatch) {
       return res.status(401).send({
@@ -142,9 +144,8 @@ exports.changePassword = async (req, res) => {
       });
     }
 
-    user.password = newPassword;
-
-    await user.save();
+    dbUser.password = newPassword;
+    await dbUser.save();
 
     return res.status(200).send({
       status: "success",
