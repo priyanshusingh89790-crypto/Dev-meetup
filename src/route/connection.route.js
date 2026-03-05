@@ -1,9 +1,30 @@
-const express = require('express')
+const express = require("express");
+const router = express.Router();
+const { userAuthGuard } = require("../middleware/auth.middleware");
+const connectionController = require("../controller/connection.controller");
 
-const router = express.Router()
+// Send connection request
+router.post(
+  "/request/send/:toUserId",
+  userAuthGuard,
+  connectionController.sendRequest,
+);
 
-const connection = require('../controller/connection.controller');
+// Review (accept/reject) an incoming request
+router.post(
+  "/request/review/:status/:requestId",
+  userAuthGuard,
+  connectionController.reviewRequest,
+);
 
-router.post('/request', connection.sendRequest)
+// Get pending connection requests
+router.get(
+  "/request/pending",
+  userAuthGuard,
+  connectionController.getPendingRequests,
+);
+
+// Get accepted connections
+router.get("/accepted", userAuthGuard, connectionController.getConnections);
 
 module.exports = router;
