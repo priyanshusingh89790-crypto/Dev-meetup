@@ -1,29 +1,70 @@
-require('dotenv').config()
-const express = require('express');
-const cookieParser = require("cookie-parser");
+require("dotenv").config();
+const express = require("express");
 const cors = require("cors");
+const cookieParser = require("cookie-parser");
+const helmet = require("helmet");
+const morgan = require("morgan");
+const http = require("http");
+const { Server } = require("socket.io");
+const connectDB = require("./config/db");
+const { errorHandler } = require("./middlewares/error.middleware");
+
+// Import cron job to schedule news fetching
+require("./jobs/news.cron");
+
+// Connect to Database
+connectDB();
 
 const app = express();
-const dbConnection = require('./config/database')
-const authRouter = require('./route/auth.route');
-const userRouter = require('./route/user.route')
-const connectionRuter = require('./route/connection.route')
-
-const port = process.env.PORT || 5000;
-
-dbConnection();
-
-app.use(cors({
-  origin: ["http://localhost:5173"],
-  credentials: true,
-}));
-app.use(express.json())
-app.use(cookieParser())
-
-app.use('/auth', authRouter)
-app.use('/user', userRouter)
-app.use('/connection', connectionRuter)
-
-app.listen(port, ()=> {
-    console.log(`DevMeetUp application is running on port : ${port}`);
+const server = http.createServer(app);
+const io = new Server(server, {
+  cors: {
+    origin: "*",
+    methods: ["GET", "POST", "PUT", "DELETE"],
+  },
 });
+
+// Pass IO to express request for use in controllers
+app.use((req, res, next) => {
+  req.io = io;
+  next();
+});
+
+// Middleware
+app.use(helmet());
+app.use(cors({ origin: true, credentials: true }));
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser());
+app.use(morgan("dev"));
+
+// Routes
+const routes = require("./routes");
+app.use("/api", routes);
+
+// Global Error Handler
+app.use(errorHandler);
+
+// Socket.io basics for chat
+io.on("connection", (socket) => {
+  console.log("New client connected", socket.id);
+  
+  socket.on("joinChat", (chatId) => {
+    socket.join(chatId);
+    console.log(`User joined chat: ${chatId}`);
+  });
+
+  socket.on("disconnect", () => {
+    console.log("Client disconnected", socket.id);
+  });
+});
+
+const PORT = process.env.PORT || 3000;
+
+if (require.main === module) {
+  server.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+  });
+}
+
+module.exports = server;
