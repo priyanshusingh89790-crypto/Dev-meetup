@@ -8,8 +8,6 @@ const http = require("http");
 const { Server } = require("socket.io");
 const connectDB = require("./config/db");
 const { errorHandler } = require("./middlewares/error.middleware");
-
-// Import cron job to schedule news fetching
 require("./jobs/news.cron");
 
 // Connect to Database
