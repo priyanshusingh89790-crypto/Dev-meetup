@@ -2,7 +2,7 @@ const { GoogleGenerativeAI } = require("@google/generative-ai");
 
 exports.processNewsWithGemini = async (newsList) => {
     try {
-        const apiKey = process.env.GEMINI_API_KEY || "AIzaSyD8mKZU5B8KiX5VFIHBPk54mdR2VGN_-vk";
+        const apiKey = import.meta.env.GEMINI_API_KEY;
         const genAI = new GoogleGenerativeAI(apiKey);
         
         const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
