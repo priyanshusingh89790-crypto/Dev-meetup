@@ -17,8 +17,9 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: "*",
+    origin: ["http://localhost:5175"],
     methods: ["GET", "POST", "PUT", "DELETE"],
+    credentials: true
   },
 });
 
@@ -27,10 +28,13 @@ app.use((req, res, next) => {
   req.io = io;
   next();
 });
-
+app.use(cors({
+  origin: ["http://localhost:5175"],
+  methods: ["GET", "POST", "PUT", "DELETE"],
+  credentials: true
+}));
 // Middleware
 app.use(helmet());
-app.use(cors({ origin: true, credentials: true }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
@@ -42,6 +46,9 @@ app.use("/api", routes);
 
 // Global Error Handler
 app.use(errorHandler);
+app.get("/", (req, res) => {
+  res.send("Server working ✅");
+});
 
 // Socket.io basics for chat
 io.on("connection", (socket) => {
