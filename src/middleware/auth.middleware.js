@@ -14,24 +14,38 @@ const adminAuthGuard = (req, res, next) => {
 const userAuthGuard = async (req, res, next) => {
     try {
         let token;
+
         if (req.headers.authorization && req.headers.authorization.startsWith("Bearer ")) {
             token = req.headers.authorization.split(" ")[1];
         }
-        console.log("token :", token)
-        if (!token ) {
-            res.status(401).send({status: "faliur", message: 'Unauthorized: Token missing'});
+
+        console.log("token :", token);
+
+        if (!token) {
+            return res.status(401).json({
+                status: "failure",
+                message: "Unauthorized: Token missing"
+            });
         }
-        // 4️⃣ Verify token
+
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        const user = await User.findById(decoded.userId);
+
+        const user = await User.findById(decoded.id); // ⚠️ fix this too
+
         if (!user || !user.isActive) {
-            res.status(401).send({status: "faliur", message: 'Unauthorized: User not found!'});
+            return res.status(401).json({
+                status: "failure",
+                message: "Unauthorized: User not found!"
+            });
         }
+
         req.user = user;
         req.userId = user._id;
+
         next();
-    } catch (error) {        
-        // 🔥 Token expired
+
+    } catch (error) {
+
         if (error.name === "TokenExpiredError") {
             return res.status(401).json({
                 code: "TOKEN_EXPIRED",
@@ -39,7 +53,6 @@ const userAuthGuard = async (req, res, next) => {
             });
         }
 
-        // 🔥 Invalid token
         if (error.name === "JsonWebTokenError") {
             return res.status(401).json({
                 code: "INVALID_TOKEN",
@@ -47,10 +60,12 @@ const userAuthGuard = async (req, res, next) => {
             });
         }
 
-        res.status(500).send({status: "faliur", message: 'Authentication failed!'});
+        return res.status(500).json({
+            status: "failure",
+            message: "Authentication failed!"
+        });
     }
-}
-
+};
 
 module.exports = {
     adminAuthGuard,
